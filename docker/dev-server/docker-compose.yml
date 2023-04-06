@@ -1,0 +1,52 @@
+version: '3.2'
+networks:
+    web:
+        external:
+            name: web
+    private:
+        external:
+            name: private
+services:
+    dev-api:
+        image: repo.dsp-archiwebo20-db-od-sn-bm.fr/dev-api
+        ports: 
+            - 8082
+        networks: 
+            - web
+            - private
+        environment:
+            - ENV=development
+            - USER=root
+            - PASSWORD=Dsp8908Archi
+            - HOST=workflow_mariadb
+            - DB=thetiptop_dev
+            - DIALECT=mariadb
+            - SECRET_KEY=8WDU29PMm0
+            - PORTDB=3306
+            - POOL_MAX=5
+            - POOL_MIN=0
+            - POOL_ACQUIRE=30000
+            - POOL_IDLE=10000
+            - PORT=8082
+            - FRONT_URL=https://front-dev.dsp-archiwebo20-db-od-sn-bm.fr
+            - BACK_URL=https://back-dev.dsp-archiwebo20-db-od-sn-bm.fr
+            - API=https://api-dev.dsp-archiwebo20-db-od-sn-bm.fr
+            - BASE_URL=https://front-dev.dsp-archiwebo20-db-od-sn-bm.fr
+            - BASE_API=https://api-dev.dsp-archiwebo20-db-od-sn-bm.fr
+            - GOOGLE_ID=886105670977-3sol2d3gs856cee8pltss2lkis8e611p.apps.googleusercontent.com
+            - GOOGLE_SECRET=E6z_tf6kK0qWbzq3I7_XD-nB
+            - FB_ID=1178128022597598
+            - FB_SECRET=8371318b8e53595c89c3410f70793b7a
+            - EMAIL_ADDRESS=thetiptop.obdn@gmail.com
+            - EMAIL_PASSWORD=@Dsp5obdn
+            - SENDGRID_API_KEY=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
+        deploy:
+            placement:
+                constraints: [node.role == worker]
+            labels:
+                - traefik.enable=true
+                - traefik.http.routers.dev-api.tls=true
+                - traefik.http.routers.dev-api.rule=Host(`api-dev.dsp-archiwebo20-db-od-sn-bm.fr`)
+                - traefik.http.routers.dev-api.entrypoints=websecure
+                - traefik.http.services.dev-api.loadbalancer.server.port=8082
+                - traefik.http.routers.dev-api.tls.certresolver=letsencrypt

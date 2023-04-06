@@ -1,0 +1,52 @@
+version: '3.2'
+networks:
+    web:
+        external:
+            name: web
+    private:
+        external:
+            name: private
+services:
+    preprod-api:
+        image: repo.dsp-archiwebo20-db-od-sn-bm.fr/prod-api
+        ports: 
+            - 8081
+        networks: 
+            - web
+            - private
+        environment:
+            - ENV=production
+            - USER=root
+            - PASSWORD=Dsp8908Archi
+            - HOST=workflow_mariadb
+            - DB=thetiptop_preprod
+            - DIALECT=mariadb
+            - SECRET_KEY=8WDU29PMm0
+            - PORTDB=3306
+            - POOL_MAX=5
+            - POOL_MIN=0
+            - POOL_ACQUIRE=30000
+            - POOL_IDLE=10000
+            - PORT=8081
+            - FRONT_URL=https://front-preprod.dsp-archiwebo20-db-od-sn-bm.fr
+            - BACK_URL=https://back-preprod.dsp-archiwebo20-db-od-sn-bm.fr
+            - API=https://api-preprod.www.dsp-archiwebo20-db-od-sn-bm.fr
+            - BASE_URL=https://front-preprod.dsp-archiwebo20-db-od-sn-bm.fr
+            - BASE_API=https://api-preprod.dsp-archiwebo20-db-od-sn-bm.fr
+            - GOOGLE_ID=886105670977-3sol2d3gs856cee8pltss2lkis8e611p.apps.googleusercontent.com
+            - GOOGLE_SECRET=E6z_tf6kK0qWbzq3I7_XD-nB
+            - FB_ID=1178128022597598
+            - FB_SECRET=8371318b8e53595c89c3410f70793b7a
+            - EMAIL_ADDRESS=thetiptop.obdn@gmail.com
+            - EMAIL_PASSWORD=@Dsp5obdn
+            - SENDGRID_API_KEY=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
+        deploy:
+            placement:
+                constraints: [node.role == worker]
+            labels:
+                - traefik.enable=true
+                - traefik.http.routers.preprod-api.tls=true
+                - traefik.http.routers.preprod-api.rule=Host(`api-preprod.dsp-archiwebo20-db-od-sn-bm.fr`)
+                - traefik.http.routers.preprod-api.entrypoints=websecure
+                - traefik.http.services.preprod-api.loadbalancer.server.port=8081
+                - traefik.http.routers.preprod-api.tls.certresolver=letsencrypt

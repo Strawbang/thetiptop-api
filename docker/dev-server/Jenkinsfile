@@ -1,0 +1,79 @@
+node {
+    def branch;
+    def scmvar;
+    def localbranch;
+    def buildNumber = currentBuild.number;
+
+    stage('Checkout'){
+        deleteDir();
+        scmvar = checkout scm;
+        branch = scmvar.GIT_BRANCH
+        echo branch
+        localbranch = branch.substring(7)
+        // test branch
+    }
+    stage('Check Branch'){
+        if(branch.contains('origin/feature') || branch.contains('origin/fix')){
+            stage('Test'){
+                imageApiTest = docker.build("dev-api", "-f docker/test/Dockerfile  --target test -t dev-api:build-${buildNumber} -t dev-api:test .");
+                imageApiTest.inside('--rm --name test-api --network private -p 8082'){
+                    sh 'npm i cross-env'
+                    sh 'npm run test'
+                }
+            }
+            stage('Build image dev-api'){
+                // imageapi     = docker.build("dev-api", "--no-cache -f docker/dev-server/Dockerfile --target test .");
+                // imageapi     = docker.build("dev-api", "-f docker/dev-server/Dockerfile --target test .");
+                // imageapi     = docker.build("dev-api", "-f docker/dev-server/Dockerfile .");
+                imageapi     = docker.build("dev-api", "-f docker/dev-server/Dockerfile  --target prod -t dev-api:build-${buildNumber} .");
+            }
+
+            stage('Build image prod-api'){
+                imageFront     = docker.build("prod-api", "-f docker/prod-server/Dockerfile -t dev-api:build-${buildNumber} .");
+            }
+
+            stage('Publish to Nexus Repository Manager'){
+                sh 'docker tag dev-api:latest repo.dsp-archiwebo20-db-od-sn-bm.fr/dev-api:latest'
+                sh 'docker tag prod-api:latest repo.dsp-archiwebo20-db-od-sn-bm.fr/prod-api:latest'
+
+                sh 'docker login --username jenkins-user --password jenkins  repo.dsp-archiwebo20-db-od-sn-bm.fr'
+                sh 'docker push repo.dsp-archiwebo20-db-od-sn-bm.fr/dev-api:latest'
+                sh 'docker push repo.dsp-archiwebo20-db-od-sn-bm.fr/prod-api:latest'
+            }
+
+            stage('Deploy stack dev-api'){
+                sh 'docker login --username jenkins-user --password jenkins repo.dsp-archiwebo20-db-od-sn-bm.fr'
+                sh 'docker stack rm dev-api'
+                sh 'docker stack deploy --with-registry-auth --compose-file docker/dev-server/docker-compose.yml dev-api'
+            }
+            
+        }
+        if(branch == 'origin/develop'){
+
+            stage ('Pull to Nexus Repository Manager'){
+                sh 'docker login --username jenkins-user --password jenkins  repo.dsp-archiwebo20-db-od-sn-bm.fr'
+                sh 'docker pull repo.dsp-archiwebo20-db-od-sn-bm.fr/prod-api:latest'
+            }
+
+            stage('Deploy stack preprod-api'){
+                sh 'docker login --username jenkins-user --password jenkins repo.dsp-archiwebo20-db-od-sn-bm.fr'
+                sh 'docker stack rm preprod-api'
+                sh 'docker stack deploy --with-registry-auth --compose-file docker/preprod-server/docker-compose.yml preprod-api'
+            }
+        }
+        if(branch == 'origin/master'){
+
+            stage ('Pull to Nexus Repository Manager'){
+                sh 'docker login --username jenkins-user --password jenkins  repo.dsp-archiwebo20-db-od-sn-bm.fr'
+                sh 'docker pull repo.dsp-archiwebo20-db-od-sn-bm.fr/prod-api:latest'
+            }
+
+            stage('Deploy stack prod-api'){
+                sh 'docker login --username jenkins-user --password jenkins repo.dsp-archiwebo20-db-od-sn-bm.fr'
+                sh 'docker stack rm prod-api'
+                sh 'docker stack deploy --with-registry-auth --compose-file docker/prod-server/docker-compose.yml prod-api'
+            }
+        }
+    }
+    
+}

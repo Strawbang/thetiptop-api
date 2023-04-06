@@ -1,0 +1,28 @@
+node {
+    
+    stage('Checkout'){
+        deleteDir();
+        checkout scm;
+    }
+    
+    stage('Stop stack prod-api'){
+        sh 'docker stack ls | grep "workflow" -v | grep "prod-back" -v | grep "prod-front" -v | grep "dev" -v | grep "preprod" -v | awk -F " " \'{ if (NR>1) print $1 }\' | xargs docker stack kill | xargs docker stack rm || true'
+        sh 'docker stack ls | grep "workflow" -v | grep "prod-back" -v | grep "prod-front" -v | grep "dev" -v | grep "preprod" -v | awk -F " " \'{ if (NR>1) print $1 }\' | xargs docker stack rm || true'
+    }
+
+    stage('Build image prod-api'){
+        imageapi     = docker.build("prod-api", "-f docker/prod-server/Dockerfile .");
+    }
+
+    stage('Publish to Nexus Repository Manager'){
+        sh 'docker tag prod-api:latest repo.dsp-archiwebo20-db-od-sn-bm.fr/prod-api:latest'
+        sh 'docker login --username jenkins-user --password jenkins  repo.dsp-archiwebo20-db-od-sn-bm.fr'
+        sh 'docker push repo.dsp-archiwebo20-db-od-sn-bm.fr/prod-api:latest'
+    }
+
+    stage('Deploy stack prod-api'){
+        sh 'docker login --username jenkins-user --password jenkins repo.dsp-archiwebo20-db-od-sn-bm.fr'
+        sh 'docker stack deploy --with-registry-auth --compose-file docker/prod-server/docker-compose.yml prod-api'
+    }
+    
+}
